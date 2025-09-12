@@ -15,49 +15,16 @@ from src.metrics import *
 from src.basics import set_device
 from datautils import *
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 import argparse
 
-parser = argparse.ArgumentParser()
-# Dataset and dataloader
-parser.add_argument('--dset_pretrain', type=str, default='etth1', help='dataset name')
-parser.add_argument('--context_points', type=int, default=512, help='sequence length')
-parser.add_argument('--target_points', type=int, default=96, help='forecast horizon')
-parser.add_argument('--batch_size', type=int, default=64, help='batch size')
-parser.add_argument('--num_workers', type=int, default=0, help='number of workers for DataLoader')
-parser.add_argument('--scaler', type=str, default='standard', help='scale the input data')
-parser.add_argument('--features', type=str, default='M', help='for multivariate model or univariate model')
-# Patch
-parser.add_argument('--patch_len', type=int, default=12, help='patch length')
-parser.add_argument('--stride', type=int, default=12, help='stride between patch')
-# RevIN
-parser.add_argument('--revin', type=int, default=1, help='reversible instance normalization')
-# Model args
-parser.add_argument('--n_layers', type=int, default=3, help='number of Transformer layers')
-parser.add_argument('--n_heads', type=int, default=16, help='number of Transformer heads')
-parser.add_argument('--d_model', type=int, default=128, help='Transformer d_model')
-parser.add_argument('--d_ff', type=int, default=512, help='Tranformer MLP dimension')
-parser.add_argument('--dropout', type=float, default=0.2, help='Transformer dropout')
-parser.add_argument('--head_dropout', type=float, default=0.2, help='head dropout')
-# Pretrain mask
-parser.add_argument('--mask_ratio', type=float, default=0.4, help='masking ratio for the input')
-# Optimization args
-parser.add_argument('--n_epochs_pretrain', type=int, default=10, help='number of pre-training epochs')
-parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
-# model id to keep track of the number of models saved
-parser.add_argument('--pretrained_model_id', type=int, default=1, help='id of the saved pretrained model')
-parser.add_argument('--model_type', type=str, default='based_model', help='for multivariate model or univariate model')
-
-
-args = parser.parse_args()
-print('args:', args)
-args.save_pretrained_model = 'patchtst_pretrained_cw'+str(args.context_points)+'_patch'+str(args.patch_len) + '_stride'+str(args.stride) + '_epochs-pretrain' + str(args.n_epochs_pretrain) + '_mask' + str(args.mask_ratio)  + '_model' + str(args.pretrained_model_id)
-args.save_path = 'saved_models/' + args.dset_pretrain + '/masked_patchtst/' + args.model_type + '/'
-if not os.path.exists(args.save_path): os.makedirs(args.save_path)
-
 
 # get available GPU devide
-set_device()
+# set_device()
 
 
 def get_model(c_in, args):
@@ -66,7 +33,7 @@ def get_model(c_in, args):
     """
     # get number of patches
     num_patch = (max(args.context_points, args.patch_len)-args.patch_len) // args.stride + 1    
-    print('number of patches:', num_patch)
+    logger.info(f'number of patches: {num_patch}')
     
     # get model
     model = PatchTST(c_in=c_in,
@@ -86,7 +53,7 @@ def get_model(c_in, args):
                 res_attention=False
                 )        
     # print out the model size
-    print('number of model params', sum(p.numel() for p in model.parameters() if p.requires_grad))
+    logger.info(f'number of model params {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
     return model
 
 
@@ -106,13 +73,16 @@ def find_lr():
                         lr=args.lr, 
                         cbs=cbs,
                         )                        
+
     # fit the data to the model
+    logger.info('finding learning rate')
     suggested_lr = learn.lr_finder()
-    print('suggested_lr', suggested_lr)
+    logger.info(f'suggested_lr {suggested_lr}')
     return suggested_lr
 
 
-def pretrain_func(lr=args.lr):
+def pretrain_func(lr, save_path, save_pretrained_model):
+    logger.info('pretraining')
     # get dataloader
     dls = get_dls(args)
     # get model     
@@ -139,15 +109,52 @@ def pretrain_func(lr=args.lr):
     train_loss = learn.recorder['train_loss']
     valid_loss = learn.recorder['valid_loss']
     df = pd.DataFrame(data={'train_loss': train_loss, 'valid_loss': valid_loss})
-    df.to_csv(args.save_path + args.save_pretrained_model + '_losses.csv', float_format='%.6f', index=False)
+    df.to_csv(save_path + save_pretrained_model + '_losses.csv', float_format='%.6f', index=False)
+    logger.info('pretraining completed')
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    # Dataset and dataloader
+    parser.add_argument('--dset_pretrain', type=str, default='force_pretrain', help='dataset name')
+    parser.add_argument('--context_points', type=int, default=460, help='sequence length')
+    parser.add_argument('--target_points', type=int, default=46, help='forecast horizon')
+    parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+    parser.add_argument('--num_workers', type=int, default=0, help='number of workers for DataLoader')
+    parser.add_argument('--scaler', type=str, default='standard', help='scale the input data')
+    parser.add_argument('--features', type=str, default='M', help='for multivariate model or univariate model')
+    # Patch
+    parser.add_argument('--patch_len', type=int, default=12, help='patch length')
+    parser.add_argument('--stride', type=int, default=12, help='stride between patch')
+    # RevIN
+    parser.add_argument('--revin', type=int, default=1, help='reversible instance normalization')
+    # Model args
+    parser.add_argument('--n_layers', type=int, default=3, help='number of Transformer layers')
+    parser.add_argument('--n_heads', type=int, default=16, help='number of Transformer heads')
+    parser.add_argument('--d_model', type=int, default=128, help='Transformer d_model')
+    parser.add_argument('--d_ff', type=int, default=512, help='Tranformer MLP dimension')
+    parser.add_argument('--dropout', type=float, default=0.2, help='Transformer dropout')
+    parser.add_argument('--head_dropout', type=float, default=0.2, help='head dropout')
+    # Pretrain mask
+    parser.add_argument('--mask_ratio', type=float, default=0.4, help='masking ratio for the input')
+    # Optimization args
+    parser.add_argument('--n_epochs_pretrain', type=int, default=10, help='number of pre-training epochs')
+    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
+    # model id to keep track of the number of models saved
+    parser.add_argument('--pretrained_model_id', type=int, default=1, help='id of the saved pretrained model')
+    parser.add_argument('--model_type', type=str, default='based_model', help='for multivariate model or univariate model')
+
+
+    args = parser.parse_args()
+    logger.info(f'args: {args}')
+    args.save_pretrained_model = 'patchtst_pretrained_cw'+str(args.context_points)+'_patch'+str(args.patch_len) + '_stride'+str(args.stride) + '_epochs-pretrain' + str(args.n_epochs_pretrain) + '_mask' + str(args.mask_ratio)  + '_model' + str(args.pretrained_model_id)
+    args.save_path = 'saved_models/' + args.dset_pretrain + '/masked_patchtst/' + args.model_type + '/'
+    if not os.path.exists(args.save_path): os.makedirs(args.save_path)
     
     args.dset = args.dset_pretrain
     suggested_lr = find_lr()
     # Pretrain
-    pretrain_func(suggested_lr)
-    print('pretraining completed')
+    pretrain_func(suggested_lr, args.save_path, args.save_pretrained_model)
     
 

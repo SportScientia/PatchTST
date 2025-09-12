@@ -20,8 +20,8 @@ import argparse
 
 parser = argparse.ArgumentParser()
 # Pretraining and Finetuning
-parser.add_argument('--is_finetune', type=int, default=0, help='do finetuning or not')
-parser.add_argument('--is_linear_probe', type=int, default=0, help='if linear_probe: only finetune the last layer')
+parser.add_argument('--is_finetune', type=int, default=1, help='do finetuning or not')
+parser.add_argument('--is_linear_probe', type=int, default=1, help='if linear_probe: only finetune the last layer')
 # Dataset and dataloader
 parser.add_argument('--dset_finetune', type=str, default='etth1', help='dataset name')
 parser.add_argument('--context_points', type=int, default=512, help='sequence length')
@@ -192,7 +192,7 @@ def linear_probe_func(lr=args.lr):
 def test_func(weight_path):
     # get dataloader
     dls = get_dls(args)
-    model = get_model(dls.vars, args, head_type='prediction').to('cuda')
+    model = get_model(dls.vars, args, head_type='prediction')#.to('cuda')
     # get callbacks
     cbs = [RevInCB(dls.vars, denorm=True)] if args.revin else []
     cbs += [PatchCB(patch_len=args.patch_len, stride=args.stride)]

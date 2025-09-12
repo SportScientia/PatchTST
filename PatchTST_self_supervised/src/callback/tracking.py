@@ -7,7 +7,8 @@ import torch
 import time
 import numpy as np
 from pathlib import Path
-
+import logging
+logger = logging.getLogger(__name__)
 
 class TrackTimerCB(Callback):
     def __init__(self):
@@ -175,10 +176,10 @@ class PrintResultsCB(Callback):
     def before_fit(self):
         if self.run_finder: return          # don't print if lr_finder is called
         if not hasattr(self.learner, 'recorder'): return      # don't print if there is no recorder
-        header = self.get_header(self.learner.recorder)
-        self.print_header = '{:>15s}'*len(header)   
-        self.print_value = '{:>15d}' + '{:>15.6f}'*(len(header)-2) + '{:>15}'        
-        print(self.print_header.format(*header))        
+        self.header = self.get_header(self.learner.recorder)
+        self.print_header = '{:>15s}'*len(self.header)   
+        self.print_value = '{:>15d}' + '{:>15.6f}'*(len(self.header)-2) + '{:>15}'        
+        logger.info(self.print_header.format(*self.header))        
     
     def after_epoch(self):      
         if self.run_finder: return      # don't print if lr_finder is called
@@ -189,7 +190,9 @@ class PrintResultsCB(Callback):
             epoch_logs += [value]
         if self.learner.epoch_time: epoch_logs.append(self.learner.epoch_time)
         # print('epoch_logs', epoch_logs)
-        print(self.print_value.format(*epoch_logs))
+        if self.header:
+            logger.info(self.print_value.format(*self.header))
+        logger.info(self.print_value.format(*epoch_logs))
         
 
 
@@ -251,7 +254,7 @@ class SaveModelCB(TrackerCB):
         else:
             super().after_epoch()
             if self.new_best:
-                print(f'Better model found at epoch {self.epoch} with {self.monitor} value: {self.best}.')
+                logger.info(f'Better model found at epoch {self.epoch} with {self.monitor} value: {self.best}.')
                 self._save(f'{self.fname}', self.path)
 
     def after_fit(self):
@@ -277,7 +280,7 @@ class EarlyStoppingCB(TrackerCB):
         else:
             self.impatient_level += 1
             if self.impatient_level > self.patient:
-                print(f'No improvement since epoch {self.epoch-self.impatient_level}: early stopping')
+                logger.info(f'No improvement since epoch {self.epoch-self.impatient_level}: early stopping')
                 raise KeyboardInterrupt
 
 

@@ -342,7 +342,7 @@ class Learner(GetAttr):
         # should remove LRFinderCB callback after fitting                
         self.remove_callback(cb)        
         self.run_finder = False        
-        if show_plot: cb.plot_lr_find()
+        # if show_plot: cb.plot_lr_find()
         if suggestion: return cb.suggested_lr  
         
         

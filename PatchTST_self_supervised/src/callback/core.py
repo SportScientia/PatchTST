@@ -44,8 +44,11 @@ class SetupLearnerCB(Callback):
     def before_batch_test(self): self._to_device()
 
     def _to_device(self):
-        batch = to_device(self.batch, self.device)        
-        if self.n_inp > 1: xb, yb = batch
+        # batch = to_device(self.batch, self.device)        
+        batch = self.batch
+        if len(batch) == 7:
+            xb, yb, y_timestamps, x_timestamps, foot_id, weight, subject_id = batch
+        elif self.n_inp > 1: xb, yb = batch
         else: xb, yb = batch, None        
         self.learner.batch = xb, yb
         

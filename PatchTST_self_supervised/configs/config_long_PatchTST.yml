@@ -1,0 +1,87 @@
+# Model configuration
+model:
+  input_size: 16  # fsr 1-9 + 3 accel + 3 gryo + total force, weight is feed to the decoder layer directly
+  hidden_size: 256
+  output_size: 46  # Prediction window size
+  sequence_length: 460  # 1 second at 460Hz
+  dropout: 0.1
+  decoder_num_layers: 2
+  decoder_hidden_dim: 160
+  network_mode: "long_format"
+  model_type: "PatchTSTModel"
+  regression_head: "RegressionHead"
+  num_layers: 1
+
+# Training configuration
+training:
+  optimizer: "RAdam"
+  loss_function: "MAELoss"
+  batch_size: 64
+  num_epochs: 100
+  best_epoch: 50
+  learning_rate: 0.00029472202831935026
+  weight_decay: 0.00035582760164974307
+  patience: 20  # Early stopping patience
+  n_splits: 5  # Number of cross-validation folds
+  use_device_ram: true
+  use_ram: false
+  teacher_forcing: false
+  grad_clip: 7.721838537303413
+
+fsr_sensor_columns:
+  - "fsr1"
+  - "fsr2"
+  - "fsr3"
+  - "fsr4"
+  - "fsr5"
+  - "fsr6"
+  - "fsr7"
+  - "fsr8"
+  - "fsr9"
+  - "total_force"
+
+# Data configuration
+data:
+  window_size: 460  # 1 second at 460Hz
+  prediction_size: 46  # Number of samples to predict
+  stride: 46  # 46 samples per stride
+  bw_norm: true
+  agumented_features: false
+  aligned_dir: "data/long_format_feather"
+  batches_dir: "data/prepared_batches_folds"
+  stats_path: "data/running_stats"
+  ignore_subjects:
+    - "S1 (Henry)"
+    - "S2 (Brion)"
+    - "S19 (Ibrahim)"
+  train_subjects:
+    - "S5 (Aadam A)"
+    - "S6 (Adam R)"
+    - "S8 (Kieran M)"
+    - "S9 (Alfie W)"
+  val_subjects:
+    - "S4 (Ali I)"
+    - "S10 (Arqam J)"
+
+
+# Output configuration
+output:
+  base_dir: "outputs"
+  save_checkpoints: true
+  save_metrics: true
+  save_plots: false
+  test_run_prefix: "test_run"  # Prefix for test run output directories 
+
+# Tuning configuration
+tuning:
+  mode: "tuning"
+  save_checkpoint: false
+  n_trials: 200
+  n_jobs: 1
+  sampler: "tpe"
+  n_splits: 1
+  pruner:
+    name: median              # or: hyperband, successivehalving, patient, nopruner
+    kwargs:
+      n_warmup_steps: 25
+      n_startup_trials: 25    # optional stability on small studies

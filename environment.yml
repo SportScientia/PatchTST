@@ -1,0 +1,22 @@
+name: patchtst
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - plotly
+  - scipy
+  - numba
+  - pytorch==1.11.0
+  - scikit-learn
+  - pyyaml
+  - pyarrow
+  - pip
+  - pip:
+    - optuna
+    - optuna-dashboard
+    - vqf==2.0.0
