@@ -12,7 +12,7 @@ from .callback.scheduler import *
 from .callback.distributed import *
 from .utils import *
 from pathlib import Path
-from tqdm import tqdm
+# from tqdm import tqdm
 
 import numpy as np
 

@@ -106,7 +106,8 @@ def find_lr(head_type):
     # weight_path = args.save_path + args.pretrained_model + '.pth'
     model = transfer_weights(args.pretrained_model, model)
     # get loss
-    loss_func = torch.nn.MSELoss(reduction='mean')
+    loss_func = torch.nn.L1Loss()
+    # loss_func = torch.nn.MSELoss(reduction='mean')
     # get callbacks
     cbs = [RevInCB(dls.vars)] if args.revin else []
     cbs += [PatchCB(patch_len=args.patch_len, stride=args.stride)]
@@ -140,7 +141,8 @@ def finetune_func(lr=args.lr):
     # weight_path = args.pretrained_model + '.pth'
     model = transfer_weights(args.pretrained_model, model)
     # get loss
-    loss_func = torch.nn.MSELoss(reduction='mean')   
+    # loss_func = torch.nn.MSELoss(reduction='mean')   
+    loss_func = torch.nn.L1Loss()
     # get callbacks
     cbs = [RevInCB(dls.vars, denorm=True)] if args.revin else []
     cbs += [

@@ -16,7 +16,10 @@ from src.basics import set_device
 from datautils import *
 
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -139,7 +142,7 @@ if __name__ == '__main__':
     # Pretrain mask
     parser.add_argument('--mask_ratio', type=float, default=0.4, help='masking ratio for the input')
     # Optimization args
-    parser.add_argument('--n_epochs_pretrain', type=int, default=10, help='number of pre-training epochs')
+    parser.add_argument('--n_epochs_pretrain', type=int, default=100, help='number of pre-training epochs')
     parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
     # model id to keep track of the number of models saved
     parser.add_argument('--pretrained_model_id', type=int, default=1, help='id of the saved pretrained model')

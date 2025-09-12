@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 import logging
 
-# from src.aws_utils import S3DataLoader, get_ephemeral_storage_path
+from src.aws_utils import S3DataLoader, get_ephemeral_storage_path
 
 # Configure logging
 logging.basicConfig(
@@ -141,7 +141,7 @@ class DeviceRAMForceDataset(Dataset):
             else:
                 logger.info(f'{file} does not exist in ephemeral storage, loading from S3')
                 loader = S3DataLoader(bucket)
-                ephemeral_storage_path.mkdir(exist_ok=True)
+                ephemeral_storage_path.mkdir(exist_ok=True, parents=True)
                 if file_type == 'json':
                     out = loader.load_json(os.path.join(f'force_modelling/{batches_dir}/', file_name))
                     logger.info(f'Saving {file} to ephemeral storage for future runs')

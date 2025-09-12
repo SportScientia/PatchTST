@@ -190,8 +190,8 @@ class PrintResultsCB(Callback):
             epoch_logs += [value]
         if self.learner.epoch_time: epoch_logs.append(self.learner.epoch_time)
         # print('epoch_logs', epoch_logs)
-        if self.header:
-            logger.info(self.print_value.format(*self.header))
+        # if self.header:
+        #     logger.info(self.print_value.format(*self.header))
         logger.info(self.print_value.format(*epoch_logs))
         
 
