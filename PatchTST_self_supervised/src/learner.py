@@ -175,7 +175,8 @@ class Learner(GetAttr):
         # forward
         pred = self.model_forward()
         # compute loss
-        loss = self.loss_func(pred, self.yb)
+        # loss = self.loss_func(pred.mean(dim=-1), self.yb)
+        loss = self.loss_func(pred[:,:,-1], self.yb)
         return pred, loss
 
     def model_forward(self):
@@ -194,7 +195,8 @@ class Learner(GetAttr):
         # forward
         pred = self.model_forward()
         # compute loss
-        loss = self.loss_func(pred, self.yb)
+        # loss = self.loss_func(pred.mean(dim=-1), self.yb)
+        loss = self.loss_func(pred[:,:,-1], self.yb)
         return pred, loss                                     
 
 

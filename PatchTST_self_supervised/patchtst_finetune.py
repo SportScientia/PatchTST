@@ -23,9 +23,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--is_finetune', type=int, default=1, help='do finetuning or not')
 parser.add_argument('--is_linear_probe', type=int, default=1, help='if linear_probe: only finetune the last layer')
 # Dataset and dataloader
-parser.add_argument('--dset_finetune', type=str, default='etth1', help='dataset name')
-parser.add_argument('--context_points', type=int, default=512, help='sequence length')
-parser.add_argument('--target_points', type=int, default=96, help='forecast horizon')
+parser.add_argument('--dset_finetune', type=str, default='force_finetune', help='dataset name')
+parser.add_argument('--context_points', type=int, default=460, help='sequence length')
+parser.add_argument('--target_points', type=int, default=46, help='forecast horizon')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--num_workers', type=int, default=0, help='number of workers for DataLoader')
 parser.add_argument('--scaler', type=str, default='standard', help='scale the input data')
@@ -36,11 +36,11 @@ parser.add_argument('--stride', type=int, default=12, help='stride between patch
 # RevIN
 parser.add_argument('--revin', type=int, default=1, help='reversible instance normalization')
 # Model args
-parser.add_argument('--n_layers', type=int, default=3, help='number of Transformer layers')
+parser.add_argument('--n_layers', type=int, default=1, help='number of Transformer layers')
 parser.add_argument('--n_heads', type=int, default=16, help='number of Transformer heads')
-parser.add_argument('--d_model', type=int, default=128, help='Transformer d_model')
-parser.add_argument('--d_ff', type=int, default=256, help='Tranformer MLP dimension')
-parser.add_argument('--dropout', type=float, default=0.2, help='Transformer dropout')
+parser.add_argument('--d_model', type=int, default=256, help='Transformer d_model')
+parser.add_argument('--d_ff', type=int, default=160, help='Tranformer MLP dimension')
+parser.add_argument('--dropout', type=float, default=0.1, help='Transformer dropout')
 parser.add_argument('--head_dropout', type=float, default=0.2, help='head dropout')
 # Optimization args
 parser.add_argument('--n_epochs_finetune', type=int, default=20, help='number of finetuning epochs')
@@ -64,7 +64,8 @@ elif args.is_linear_probe: args.save_finetuned_model = args.dset_finetune+'_patc
 else: args.save_finetuned_model = args.dset_finetune+'_patchtst_finetuned'+suffix_name
 
 # get available GPU devide
-set_device()
+if torch.cuda.is_available():
+    set_device()
 
 def get_model(c_in, args, head_type, weight_path=None):
     """
@@ -237,3 +238,4 @@ if __name__ == '__main__':
         print('----------- Complete! -----------')
 
 
+# conda activate patchtst && python -m patchtst_finetune --is_finetune 1 --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth
