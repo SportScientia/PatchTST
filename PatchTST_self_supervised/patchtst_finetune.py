@@ -21,7 +21,7 @@ import argparse
 parser = argparse.ArgumentParser()
 # Pretraining and Finetuning
 parser.add_argument('--is_finetune', type=int, default=1, help='do finetuning or not')
-parser.add_argument('--is_linear_probe', type=int, default=1, help='if linear_probe: only finetune the last layer')
+parser.add_argument('--is_linear_probe', type=int, default=0, help='if linear_probe: only finetune the last layer')
 # Dataset and dataloader
 parser.add_argument('--dset_finetune', type=str, default='force_finetune', help='dataset name')
 parser.add_argument('--context_points', type=int, default=460, help='sequence length')
@@ -43,7 +43,7 @@ parser.add_argument('--d_ff', type=int, default=160, help='Tranformer MLP dimens
 parser.add_argument('--dropout', type=float, default=0.1, help='Transformer dropout')
 parser.add_argument('--head_dropout', type=float, default=0.2, help='head dropout')
 # Optimization args
-parser.add_argument('--n_epochs_finetune', type=int, default=20, help='number of finetuning epochs')
+parser.add_argument('--n_epochs_finetune', type=int, default=100, help='number of finetuning epochs')
 parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
 # Pretrained model name
 parser.add_argument('--pretrained_model', type=str, default=None, help='pretrained model name')
@@ -64,8 +64,8 @@ elif args.is_linear_probe: args.save_finetuned_model = args.dset_finetune+'_patc
 else: args.save_finetuned_model = args.dset_finetune+'_patchtst_finetuned'+suffix_name
 
 # get available GPU devide
-if torch.cuda.is_available():
-    set_device()
+# if torch.cuda.is_available():
+#     set_device()
 
 def get_model(c_in, args, head_type, weight_path=None):
     """
@@ -155,7 +155,7 @@ def finetune_func(lr=args.lr):
                         loss_func, 
                         lr=lr, 
                         cbs=cbs,
-                        metrics=[mse]
+                        metrics=[mse, mae]
                         )                            
     # fit the data to the model
     #learn.fit_one_cycle(n_epochs=args.n_epochs_finetune, lr_max=lr)
@@ -185,7 +185,7 @@ def linear_probe_func(lr=args.lr):
                         loss_func, 
                         lr=lr, 
                         cbs=cbs,
-                        metrics=[mse]
+                        metrics=[mse, mae]
                         )                            
     # fit the data to the model
     learn.linear_probe(n_epochs=args.n_epochs_finetune, base_lr=lr)
@@ -238,4 +238,4 @@ if __name__ == '__main__':
         print('----------- Complete! -----------')
 
 
-# conda activate patchtst && python -m patchtst_finetune --is_finetune 1 --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth
+# conda activate patchtst && python -m patchtst_finetune --is_finetune 1 --pretrained_model /home/ubuntu/repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain100_mask0.4_model1.pth
