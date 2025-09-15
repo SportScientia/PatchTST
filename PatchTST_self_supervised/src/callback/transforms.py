@@ -6,7 +6,7 @@ from src.models.layers.revin import RevIN
 
 class RevInCB(Callback):
     def __init__(self, num_features: int, eps=1e-5, 
-                        affine:bool=False, denorm:bool=True):
+                        affine:bool=True, denorm:bool=True):
         """        
         :param num_features: the number of features or channels
         :param eps: a value added for numerical stability

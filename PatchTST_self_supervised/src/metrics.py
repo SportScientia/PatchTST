@@ -4,12 +4,16 @@ from torch import Tensor
 import torch.nn.functional as F
 
 def mse(y_true, y_pred):
-    return F.mse_loss(y_true, y_pred[:,:,-1], reduction='mean')
+    breakpoint()
+    return F.mse_loss(y_true, y_pred, reduction='mean')
 
 def rmse(y_true, y_pred):
     return torch.sqrt(F.mse_loss(y_true, y_pred, reduction='mean'))
 
 def mae(y_true, y_pred):
+    return F.l1_loss(y_true, y_pred, reduction='mean')
+
+def mae_last(y_true, y_pred):
     return F.l1_loss(y_true, y_pred[:, :, -1], reduction='mean')
 
 def r2_score(y_true, y_pred):

@@ -20,8 +20,8 @@ import argparse
 
 parser = argparse.ArgumentParser()
 # Pretraining and Finetuning
-parser.add_argument('--is_finetune', type=int, default=1, help='do finetuning or not')
-parser.add_argument('--is_linear_probe', type=int, default=0, help='if linear_probe: only finetune the last layer')
+parser.add_argument('--is_finetune', type=int, default=0, help='do finetuning or not')
+parser.add_argument('--is_linear_probe', type=int, default=1, help='if linear_probe: only finetune the last layer')
 # Dataset and dataloader
 parser.add_argument('--dset_finetune', type=str, default='force_finetune', help='dataset name')
 parser.add_argument('--context_points', type=int, default=460, help='sequence length')
@@ -50,6 +50,7 @@ parser.add_argument('--pretrained_model', type=str, default=None, help='pretrain
 # model id to keep track of the number of models saved
 parser.add_argument('--finetuned_model_id', type=int, default=1, help='id of the saved finetuned model')
 parser.add_argument('--model_type', type=str, default='based_model', help='for multivariate model or univariate model')
+parser.add_argument('--head_type', type=str, default='force_prediction', help='for force prediction or force regression')
 
 
 args = parser.parse_args()
@@ -66,6 +67,10 @@ else: args.save_finetuned_model = args.dset_finetune+'_patchtst_finetuned'+suffi
 # get available GPU devide
 # if torch.cuda.is_available():
 #     set_device()
+
+if args.head_type == 'force_prediction':
+    args.revin = 0
+
 
 def get_model(c_in, args, head_type, weight_path=None):
     """
@@ -137,7 +142,7 @@ def finetune_func(lr=args.lr):
     # get dataloader
     dls = get_dls(args)
     # get model 
-    model = get_model(dls.vars, args, head_type='prediction')
+    model = get_model(dls.vars, args, head_type=args.head_type)
     # transfer weight
     # weight_path = args.pretrained_model + '.pth'
     model = transfer_weights(args.pretrained_model, model)
@@ -155,7 +160,7 @@ def finetune_func(lr=args.lr):
                         loss_func, 
                         lr=lr, 
                         cbs=cbs,
-                        metrics=[mse, mae]
+                        metrics=[mae_last]
                         )                            
     # fit the data to the model
     #learn.fit_one_cycle(n_epochs=args.n_epochs_finetune, lr_max=lr)
@@ -168,7 +173,7 @@ def linear_probe_func(lr=args.lr):
     # get dataloader
     dls = get_dls(args)
     # get model 
-    model = get_model(dls.vars, args, head_type='prediction')
+    model = get_model(dls.vars, args, head_type=args.head_type)
     # transfer weight
     # weight_path = args.save_path + args.pretrained_model + '.pth'
     model = transfer_weights(args.pretrained_model, model)
@@ -185,7 +190,7 @@ def linear_probe_func(lr=args.lr):
                         loss_func, 
                         lr=lr, 
                         cbs=cbs,
-                        metrics=[mse, mae]
+                        metrics=[mae]
                         )                            
     # fit the data to the model
     learn.linear_probe(n_epochs=args.n_epochs_finetune, base_lr=lr)
@@ -195,7 +200,7 @@ def linear_probe_func(lr=args.lr):
 def test_func(weight_path):
     # get dataloader
     dls = get_dls(args)
-    model = get_model(dls.vars, args, head_type='prediction')#.to('cuda')
+    model = get_model(dls.vars, args, head_type=args.head_type)#.to('cuda')
     # get callbacks
     cbs = [RevInCB(dls.vars, denorm=True)] if args.revin else []
     cbs += [PatchCB(patch_len=args.patch_len, stride=args.stride)]
@@ -213,7 +218,7 @@ if __name__ == '__main__':
     if args.is_finetune:
         args.dset = args.dset_finetune
         # Finetune
-        suggested_lr = find_lr(head_type='prediction')        
+        suggested_lr = find_lr(head_type=args.head_type)        
         finetune_func(suggested_lr)        
         print('finetune completed')
         # Test
@@ -223,7 +228,7 @@ if __name__ == '__main__':
     elif args.is_linear_probe:
         args.dset = args.dset_finetune
         # Finetune
-        suggested_lr = find_lr(head_type='prediction')        
+        suggested_lr = 1e3 #find_lr(head_type=args.head_type)        
         linear_probe_func(suggested_lr)        
         print('finetune completed')
         # Test
@@ -238,4 +243,6 @@ if __name__ == '__main__':
         print('----------- Complete! -----------')
 
 
-# conda activate patchtst && python -m patchtst_finetune --is_finetune 1 --pretrained_model /home/ubuntu/repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain100_mask0.4_model1.pth
+# conda activate patchtst && python -m patchtst_finetune --head_type force_prediction --pretrained_model /home/ubuntu/repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain100_mask0.4_model1.pth
+# conda activate patchtst && python -m patchtst_finetune --head_type force_prediction --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth
+# conda activate patchtst && python -m patchtst_finetune --head_type prediction --dset_finetune etth1 --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/etth1/masked_patchtst/based_model/patchtst_pretrained_cw512_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth

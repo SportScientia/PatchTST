@@ -120,9 +120,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     # Dataset and dataloader
-    parser.add_argument('--dset_pretrain', type=str, default='force_pretrain', help='dataset name')
-    parser.add_argument('--context_points', type=int, default=460, help='sequence length')
-    parser.add_argument('--target_points', type=int, default=46, help='forecast horizon')
+    parser.add_argument('--dset_pretrain', type=str, default='etth1', help='dataset name')
+    parser.add_argument('--context_points', type=int, default=512, help='sequence length')
+    parser.add_argument('--target_points', type=int, default=96, help='forecast horizon')
     parser.add_argument('--batch_size', type=int, default=64, help='batch size')
     parser.add_argument('--num_workers', type=int, default=0, help='number of workers for DataLoader')
     parser.add_argument('--scaler', type=str, default='standard', help='scale the input data')
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     # Pretrain mask
     parser.add_argument('--mask_ratio', type=float, default=0.4, help='masking ratio for the input')
     # Optimization args
-    parser.add_argument('--n_epochs_pretrain', type=int, default=100, help='number of pre-training epochs')
+    parser.add_argument('--n_epochs_pretrain', type=int, default=1, help='number of pre-training epochs')
     parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
     # model id to keep track of the number of models saved
     parser.add_argument('--pretrained_model_id', type=int, default=1, help='id of the saved pretrained model')

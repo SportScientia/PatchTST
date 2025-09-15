@@ -34,7 +34,7 @@ class PatchTST(nn.Module):
 
         super().__init__()
 
-        assert head_type in ['pretrain', 'prediction', 'regression', 'classification'], 'head type should be either pretrain, prediction, or regression'
+        assert head_type in ['pretrain', 'prediction', 'regression', 'classification', 'force_prediction', 'force_prediction_revin', 'force_regression'], 'head type should be either pretrain, prediction, or regression'
         # Backbone
         self.backbone = PatchTSTEncoder(c_in, num_patch=num_patch, patch_len=patch_len, 
                                 n_layers=n_layers, d_model=d_model, n_heads=n_heads, 
@@ -51,8 +51,12 @@ class PatchTST(nn.Module):
             self.head = PretrainHead(d_model, patch_len, head_dropout) # custom head passed as a partial func with all its kwargs
         elif head_type == "prediction":
             self.head = PredictionHead(individual, self.n_vars, d_model, num_patch, target_dim, head_dropout)
-        elif head_type == "force":
+        elif head_type == "force_prediction":
             self.head = forcePredictionHead(individual, self.n_vars, d_model, num_patch, target_dim, head_dropout)
+        elif head_type == "force_prediction_revin":
+            self.head = forcePredictionHead_revin(individual, self.n_vars, d_model, num_patch, target_dim, head_dropout)
+        elif head_type == "force_regression":
+            self.head = forceRegressionHead(self.n_vars, d_model, target_dim, head_dropout)
         elif head_type == "regression":
             self.head = RegressionHead(self.n_vars, d_model, target_dim, head_dropout, y_range)
         elif head_type == "classification":
@@ -121,39 +125,71 @@ class forcePredictionHead(nn.Module):
         self.flatten = flatten
         head_dim = d_model*num_patch
 
-        if self.individual:
-            self.linears = nn.ModuleList()
-            self.dropouts = nn.ModuleList()
-            self.flattens = nn.ModuleList()
-            for i in range(self.n_vars):
-                self.flattens.append(nn.Flatten(start_dim=-2))
-                self.linears.append(nn.Linear(head_dim, forecast_len))
-                self.dropouts.append(nn.Dropout(head_dropout))
-        else:
-            self.flatten = nn.Flatten(start_dim=-2)
-            self.linear = nn.Linear(head_dim, forecast_len)
-            self.dropout = nn.Dropout(head_dropout)
+        self.flatten = nn.Flatten(start_dim=-2)
+        self.linear = nn.Linear(head_dim, forecast_len, 1)
+        self.dropout = nn.Dropout(head_dropout)
+
+        self.linear_features_combine = nn.Linear(n_vars, 1)   
 
     def forward(self, x):                     
         """
         x: [bs x nvars x d_model x num_patch]
         output: [bs x forecast_len x nvars]
         """
-        if self.individual:
-            x_out = []
-            for i in range(self.n_vars):
-                z = self.flattens[i](x[:,i,:,:])          # z: [bs x d_model * num_patch]
-                z = self.linears[i](z)                    # z: [bs x forecast_len]
-                z = self.dropouts[i](z)
-                x_out.append(z)
-            x = torch.stack(x_out, dim=1)         # x: [bs x nvars x forecast_len]
-        else:
-            x = self.flatten(x)     # x: [bs x nvars x (d_model * num_patch)]    
-            x = self.dropout(x)
-            x = self.linear(x)      # x: [bs x nvars x forecast_len]
-            ### need more layers here
-        return x.transpose(2,1)     # [bs x forecast_len x nvars]
+        x = self.flatten(x)     # x: [bs x nvars x (d_model * num_patch)]    
+        x = self.dropout(x)
+        x = self.linear(x)      # x: [bs x nvars x forecast_len]
+        x =x.transpose(2,1)
+        x = self.dropout(x)
+        return self.linear_features_combine(x)
+        
 
+
+class forcePredictionHead_revin(nn.Module):
+    def __init__(self, individual, n_vars, d_model, num_patch, forecast_len, head_dropout=0, flatten=False):
+        super().__init__()
+
+        self.individual = individual
+        self.n_vars = n_vars
+        self.flatten = flatten
+        head_dim = d_model*num_patch
+
+        self.flatten = nn.Flatten(start_dim=-2)
+        self.linear = nn.Linear(head_dim, forecast_len, 1)
+        self.dropout = nn.Dropout(head_dropout)
+
+        # self.linear_features_combine = nn.Linear(n_vars, 1)
+
+    def forward(self, x):                     
+        """
+        x: [bs x nvars x d_model x num_patch]
+        output: [bs x forecast_len x nvars]
+        """
+        x = self.flatten(x)     # x: [bs x nvars x (d_model * num_patch)]    
+        x = self.dropout(x)
+        x = self.linear(x)      # x: [bs x nvars x forecast_len]
+        # ### need more layers here
+        return x.transpose(2,1)
+
+
+class forceRegressionHead(nn.Module):
+    def __init__(self, n_vars, d_model, output_dim, head_dropout, y_range=None):
+        super().__init__()
+        self.y_range = y_range # leave it here for compatibility
+        self.flatten = nn.Flatten(start_dim=1)
+        self.dropout = nn.Dropout(head_dropout)
+        self.linear = nn.Linear(n_vars*d_model, output_dim, 1)
+
+    def forward(self, x):
+        """
+        x: [bs x nvars x d_model x num_patch]
+        output: [bs x output_dim]
+        """
+        x = x[:,:,:,-1]             # only consider the last item in the sequence, x: bs x nvars x d_model
+        x = self.flatten(x)         # x: bs x nvars * d_model
+        x = self.dropout(x)
+        y = self.linear(x)         # y: bs x output_dim
+        return y
 
 
 class PredictionHead(nn.Module):
