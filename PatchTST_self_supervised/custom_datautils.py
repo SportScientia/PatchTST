@@ -39,7 +39,7 @@ def get_data_loaders(fold: int, config: Dict, device: torch.device, bucket: str)
                 val_subjects=config['data']['val_subjects'],
                 batch_size=config['training']['batch_size'],
                 device=device,
-                shuffle=False,
+                shuffle=True,
                 num_workers=0,
                 bucket=bucket
             )

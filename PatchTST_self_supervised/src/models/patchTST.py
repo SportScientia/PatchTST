@@ -141,7 +141,7 @@ class forcePredictionHead(nn.Module):
         x = self.linear(x)      # x: [bs x nvars x forecast_len]
         x =x.transpose(2,1)
         x = self.dropout(x)
-        return self.linear_features_combine(x)
+        return self.linear_features_combine(x).squeeze(-1)
         
 
 

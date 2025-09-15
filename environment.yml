@@ -7,16 +7,17 @@ channels:
 dependencies:
   - python=3.10
   - pandas
-  - numpy
-  - plotly
-  - scipy
-  - numba
-  - pytorch==1.11.0
+  - numpy<2
+  # - plotly
+  # - scipy
+  # - numba
+  - pytorch==1.13.1
+  - pytorch-cuda==11.6
   - scikit-learn
   - pyyaml
   - pyarrow
-  - pip
-  - pip:
-    - optuna
-    - optuna-dashboard
-    - vqf==2.0.0
+  - boto3
+  - requests
+  # - pip
+  # - pip:
+  #   - vqf==2.0.0
