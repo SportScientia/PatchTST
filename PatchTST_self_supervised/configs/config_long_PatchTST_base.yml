@@ -1,0 +1,93 @@
+# Model configuration
+model:
+  n_features: 16  # fsr 1-9 + 3 accel + 3 gryo + total force, weight is feed to the decoder layer directly
+  hidden_size: 256
+  output_size: 46  # Prediction window size
+  sequence_length: 460  # 1 second at 460Hz
+  dropout: 0.1
+  decoder_num_layers: 2
+  decoder_hidden_dim: 160
+  network_mode: "long_format"
+  model_type: "PatchTSTModel"
+  regression_head: "RegressionHead"
+  num_layers: 1
+
+# Training configuration
+training:
+  loss_function: "MAELoss"
+  batch_size: 64
+  num_epochs: 100
+  learning_rate: 0 # will be set in the script
+  use_device_ram: true
+
+fsr_sensor_columns:
+  - "fsr1"
+  - "fsr2"
+  - "fsr3"
+  - "fsr4"
+  - "fsr5"
+  - "fsr6"
+  - "fsr7"
+  - "fsr8"
+  - "fsr9"
+  - "total_force"
+
+# Data configuration
+data:
+  window_size: 460  # 1 second at 460Hz
+  prediction_size: 46  # Number of samples to predict
+  stride: 46  # 46 samples per stride
+  bw_norm: true
+  aligned_dir: "data/long_format_feather"
+  batches_dir: "prepared_batches_folds"
+  stats_path: "data/running_stats"
+  ignore_subjects:
+    - "S1 (Henry)"
+    - "S2 (Brion)"
+    - "S19 (Ibrahim)"
+  train_subjects:
+    - "S3 (Sam D)"
+    # - "S5 (Aadam A)"
+    # - "S6 (Adam R)"
+    # - "S8 (Kieran M)"
+    # - "S9 (Alfie W)"
+    # - "S11 (Demitris L)"
+    # - "S12 (Oliver)"
+    # - "S13 (Mohd Y)"
+    # - "S14 (Mohd I)"
+    # - "S16 (Ahmed)"
+    # - "S17 (Joe)"
+    # - "S18 (Harry)"
+    # - "S20 (Muizz)"
+    # - "S21 (Anderson)"
+    # - "S25 (Ella)"
+    # - "S26 (Matt)"
+    # - "S27 (George)"
+    # - "S28 (Jack)"
+    # - "S30 (William)"
+    # - "S31 (Finlay)"
+    # - "S32 (Glenn)"
+    # - "S33 (Saleem)"
+    # - "S35 (Jack)"
+    # - "S36 (Jamie)"
+    # - "S37 (Amir)"
+    # - "S38 (Ben)"
+    # - "S39 (Daniel)"
+  val_subjects:
+    - "S4 (Ali I)"
+    # - "S10 (Arqam J)"
+    # - "S15 (Reuben)"
+    # - "S23 (Tyler)"
+    # - "S24 (Rebecca)"
+    # - "S29 (Kat)"
+    # - "S34 (Josh)"
+    # - "S40 (Anna)"
+
+
+# Output configuration
+output:
+  save_path: "outputs/"
+  save_checkpoints: true
+  save_metrics: true
+  save_plots: false
+  test_run_prefix: "test_run"  # Prefix for test run output directories 
