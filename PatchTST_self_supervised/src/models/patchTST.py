@@ -24,7 +24,7 @@ class PatchTST(nn.Module):
          [bs x target_dim] for classification
          [bs x num_patch x n_vars x patch_len] for pretrain
     """
-    def __init__(self, c_in:int, target_dim:int, patch_len:int, stride:int, num_patch:int, 
+    def __init__(self, n_vars:int, target_dim:int, patch_len:int, stride:int, num_patch:int, 
                  n_layers:int=3, d_model=128, n_heads=16, shared_embedding=True, d_ff:int=256, 
                  norm:str='BatchNorm', attn_dropout:float=0., dropout:float=0., act:str="gelu", 
                  res_attention:bool=True, pre_norm:bool=False, store_attn:bool=False,
@@ -36,7 +36,7 @@ class PatchTST(nn.Module):
 
         assert head_type in ['pretrain', 'prediction', 'regression', 'classification', 'force_prediction', 'force_prediction_revin', 'force_regression'], 'head type should be either pretrain, prediction, or regression'
         # Backbone
-        self.backbone = PatchTSTEncoder(c_in, num_patch=num_patch, patch_len=patch_len, 
+        self.backbone = PatchTSTEncoder(n_vars, num_patch=num_patch, patch_len=patch_len, 
                                 n_layers=n_layers, d_model=d_model, n_heads=n_heads, 
                                 shared_embedding=shared_embedding, d_ff=d_ff,
                                 attn_dropout=attn_dropout, dropout=dropout, act=act, 
@@ -44,7 +44,7 @@ class PatchTST(nn.Module):
                                 pe=pe, learn_pe=learn_pe, verbose=verbose, **kwargs)
 
         # Head
-        self.n_vars = c_in
+        self.n_vars = n_vars
         self.head_type = head_type
 
         if head_type == "pretrain":
@@ -139,7 +139,7 @@ class forcePredictionHead(nn.Module):
         self.linear_features_combine2 = nn.Linear(self.n_vars, 1)
 
         self.dropout = nn.Dropout(self.head_dropout)
-        self.activation = nn.ReLU()
+        self.activation = nn.GELU()
 
     def feature_extractor(self, x):
         x = self.flatten(x)                         # x: [bs x nvars x (d_model * num_patch)], [bs x nvars x head_dim] 
@@ -300,14 +300,14 @@ class PretrainHead(nn.Module):
 
 
 class PatchTSTEncoder(nn.Module):
-    def __init__(self, c_in, num_patch, patch_len, 
+    def __init__(self, n_vars, num_patch, patch_len, 
                  n_layers=3, d_model=128, n_heads=16, shared_embedding=True,
                  d_ff=256, norm='BatchNorm', attn_dropout=0., dropout=0., act="gelu", store_attn=False,
                  res_attention=True, pre_norm=False,
                  pe='zeros', learn_pe=True, verbose=False, **kwargs):
 
         super().__init__()
-        self.n_vars = c_in
+        self.n_vars = n_vars
         self.num_patch = num_patch
         self.patch_len = patch_len
         self.d_model = d_model

@@ -13,7 +13,7 @@ from src.data.pred_dataset import *
 from custom_datautils import get_data_loaders
 
 DSETS = ['ettm1', 'ettm2', 'etth1', 'etth2', 'electricity',
-         'traffic', 'illness', 'weather', 'exchange', 'force_pretrain', 'force_finetune'
+         'traffic', 'illness', 'weather', 'exchange', 'force_pretrain', 'force_finetune', 'etth1_reg'
         ]
 
 class CustomDataLoaders:
@@ -27,6 +27,7 @@ class CustomDataLoaders:
         self.c = c
 
 def get_dls(params):
+
     
     assert params.dset in DSETS, f"Unrecognized dset (`{params.dset}`). Options include: {DSETS}"
     if not hasattr(params,'use_time_features'): params.use_time_features = False
@@ -81,6 +82,25 @@ def get_dls(params):
                 },
                 batch_size=params.batch_size,
                 workers=params.num_workers,
+                )
+
+    elif params.dset == 'etth1_reg':
+        root_path = 'data/datasets/public/ETDataset/ETT-small/'
+        size = [params.context_points, 0, params.target_points]
+        dls = DataLoaders(
+                datasetCls=Dataset_ETT_hour_reg,
+                dataset_kwargs={
+                'root_path': root_path,
+                'data_path': 'ETTh1.csv',
+                'features': params.features,
+                'scale': True,
+                'size': size,
+                'use_time_features': False
+                },
+                batch_size=params.batch_size,
+                workers=params.num_workers,
+                shuffle_train=False,
+                shuffle_val=False,
                 )
 
 
@@ -208,16 +228,16 @@ def get_dls(params):
         dls = CustomDataLoaders(
             train_loader=train_loader,
             val_loader=val_loader,
-            vars=config['model']['input_size'],
+            vars=config['model']['n_features'],
             len=params.context_points,
             c=config['model']['output_size']
         )
 
     elif params.dset == 'force_finetune':
         # Load config file
-        config_path = 'configs/config_long_PatchTST.yml'
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
+        # config_path = 'configs/config_long_PatchTST.yml'
+        # with open(config_path, 'r') as f:
+        #     config = yaml.safe_load(f)
         
         # Set device
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -225,7 +245,7 @@ def get_dls(params):
         # Get custom dataloaders
         train_loader, val_loader = get_data_loaders(
             fold=0,  # Set to 0 as specified
-            config=config,
+            config=params,
             device=device,
             bucket=None  # Set to None for local usage
         )
@@ -234,9 +254,9 @@ def get_dls(params):
         dls = CustomDataLoaders(
             train_loader=train_loader,
             val_loader=val_loader,
-            vars=config['model']['input_size'],
+            vars=params.n_features,
             len=params.context_points,
-            c=config['model']['output_size']
+            c=params.target_points
         )
 
 

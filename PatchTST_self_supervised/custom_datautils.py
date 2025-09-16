@@ -34,10 +34,10 @@ def get_data_loaders(fold: int, config: Dict, device: torch.device, bucket: str)
 
     return create_device_ram_data_loaders(
                 fold=fold,
-                batches_dir=config['data']['batches_dir'],
-                train_subjects=config['data']['train_subjects'],
-                val_subjects=config['data']['val_subjects'],
-                batch_size=config['training']['batch_size'],
+                batches_dir=config.batches_dir,
+                train_subjects=config.train_subjects,
+                val_subjects=config.val_subjects,
+                batch_size=config.batch_size,
                 device=device,
                 shuffle=True,
                 num_workers=0,
