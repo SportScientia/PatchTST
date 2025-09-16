@@ -129,11 +129,14 @@ class forcePredictionHead(nn.Module):
         self.head_dropout = head_dropout
 
         self.flatten = nn.Flatten(start_dim=-2)
-        self.linear1 = nn.Linear(self.head_dim, self.head_dim // 2)
-        self.linear2 = nn.Linear(self.head_dim // 2, self.forecast_len)
+        # ds = 30
+        # self.linear1 = nn.Linear(self.head_dim, self.head_dim // ds)
+        # self.linear2 = nn.Linear(self.head_dim // ds, self.forecast_len)
+        # self.linear_features_combine1 = nn.Linear(self.n_vars, self.n_vars // 2)
+        # self.linear_features_combine2 = nn.Linear(self.n_vars // 2, 1)
 
-        self.linear_features_combine1 = nn.Linear(self.n_vars, self.n_vars // 2)
-        self.linear_features_combine2 = nn.Linear(self.n_vars // 2, 1)
+        self.linear1 = nn.Linear(self.head_dim, self.forecast_len)
+        self.linear_features_combine2 = nn.Linear(self.n_vars, 1)
 
         self.dropout = nn.Dropout(self.head_dropout)
         self.activation = nn.ReLU()
@@ -144,20 +147,20 @@ class forcePredictionHead(nn.Module):
         x = self.activation(x)
         x = self.dropout(x)
 
-        x = x.transpose(2,1)                        # x: [bs x head_dim // 2 x nvars]
-        x = self.linear_features_combine1(x)        # x: [bs x nvars // 2 x head_dim // 2]
-        x = self.activation(x)
-        x = self.dropout(x)
+        # x = x.transpose(2,1)                        # x: [bs x head_dim // 2 x nvars]
+        # x = self.linear_features_combine1(x)        # x: [bs x nvars // 2 x head_dim // 2]
+        # x = self.activation(x)
+        # x = self.dropout(x)
 
-        x = x.transpose(2,1)                        # x: [bs x head_dim // 2 x nvars // 2]
-        x = self.linear2(x)                         # x: [bs x forecast_len x nvars // 2]
-        x = self.activation(x)
-        x = self.dropout(x)
+        # x = x.transpose(2,1)                        # x: [bs x head_dim // 2 x nvars // 2]
+        # x = self.linear2(x)                         # x: [bs x forecast_len x nvars // 2]
+        # x = self.activation(x)
+        # x = self.dropout(x)
 
         x = x.transpose(2,1)                        # x: [bs x nvars // 2 x forecast_len]
         x = self.linear_features_combine2(x)        # x: [bs x forecast_len x 1]
-        x = self.activation(x)
-        x = self.dropout(x)
+        # x = self.activation(x)
+        # x = self.dropout(x)
         return x
 
     def _init_weights(self):
@@ -170,7 +173,7 @@ class forcePredictionHead(nn.Module):
         # breakpoint()
         # x_back = x.clone()
         # x = x_back.clone()
-        return self.feature_extractor(x).squeeze(-1)
+        return self.feature_extractor(x)
 
 
     # def forward(self, x):                     

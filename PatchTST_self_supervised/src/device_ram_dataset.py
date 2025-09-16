@@ -92,7 +92,7 @@ class DeviceRAMForceDataset(Dataset):
 
                 # Convert to tensors
                 X = torch.from_numpy(batch_data['X']).float()
-                y = torch.from_numpy(batch_data['y']).float()
+                y = torch.from_numpy(batch_data['y']).float().unsqueeze(-1)
                 ##### preconvert weight to [B, 460, 1]
                 weight = torch.from_numpy(np.full((X.shape[0], X.shape[1], 1), batch_data['weight'] / 100)).float()
                 
