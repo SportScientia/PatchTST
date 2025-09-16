@@ -168,8 +168,8 @@ def finetune_func(lr=args.lr):
     # weight_path = args.pretrained_model + '.pth'
     model = transfer_weights(args.pretrained_model, model)
     # get loss
-    # loss_func = torch.nn.MSELoss(reduction='mean')   
-    loss_func = torch.nn.L1Loss()
+    loss_func = torch.nn.MSELoss(reduction='mean')   
+    # loss_func = torch.nn.L1Loss()
     # get callbacks
     cbs = [RevInCB(dls.vars, denorm=True)] if args.revin else []
     cbs += [
@@ -181,7 +181,7 @@ def finetune_func(lr=args.lr):
                         loss_func, 
                         lr=lr, 
                         cbs=cbs,
-                        metrics=[mse]
+                        metrics=[mae]
                         )                            
     # fit the data to the model
     #learn.fit_one_cycle(n_epochs=args.n_epochs_finetune, lr_max=lr)
@@ -199,8 +199,8 @@ def linear_probe_func(lr=args.lr):
     # weight_path = args.save_path + args.pretrained_model + '.pth'
     model = transfer_weights(args.pretrained_model, model)
     # get loss
-    loss_func = torch.nn.L1Loss()    
-    # loss_func = torch.nn.MSELoss(reduction='mean')    
+    # loss_func = torch.nn.L1Loss()    
+    loss_func = torch.nn.MSELoss(reduction='mean')    
     # get callbacks
     cbs = [RevInCB(dls.vars, denorm=True)] if args.revin else []
     cbs += [
@@ -212,7 +212,7 @@ def linear_probe_func(lr=args.lr):
                         loss_func, 
                         lr=lr, 
                         cbs=cbs,
-                        metrics=[mae]
+                        metrics=[mse]
                         )                            
     # fit the data to the model
     learn.linear_probe(n_epochs=args.n_epochs_finetune, base_lr=lr)
@@ -240,7 +240,7 @@ if __name__ == '__main__':
     if args.is_finetune:
         args.dset = args.dset_finetune
         # Finetune
-        suggested_lr = 0.007054802310718645 #find_lr(head_type=args.head_type)        
+        suggested_lr = find_lr(head_type=args.head_type)        # 0.0009111627561154895
         finetune_func(suggested_lr)        
         print('finetune completed')
         # Test
@@ -250,7 +250,7 @@ if __name__ == '__main__':
     elif args.is_linear_probe:
         args.dset = args.dset_finetune
         # Finetune
-        suggested_lr = 0.007054802310718645 #find_lr(head_type=args.head_type)        
+        suggested_lr = find_lr(head_type=args.head_type)        
         linear_probe_func(suggested_lr)        
         print('finetune completed')
         # Test
@@ -273,3 +273,4 @@ if __name__ == '__main__':
 
 
 # conda activate patchtst && python -m patchtst_finetune --model_backbone MCformer --head_type force_prediction --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_MCformer/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth
+# conda activate patchtst && python -m patchtst_finetune --model_backbone MCformer --head_type force_prediction --pretrained_model /home/ubuntu/repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_MCformer/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain100_mask0.4_model1.pth  --n_layers 2 --revin 0
