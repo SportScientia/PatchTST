@@ -7,6 +7,7 @@ import torch
 from torch import nn
 
 from src.models.patchTST import PatchTST
+from src.models.MCformer import MCformer
 from src.learner import Learner, transfer_weights
 from src.callback.tracking import *
 from src.callback.patch_mask import *
@@ -39,22 +40,43 @@ def get_model(c_in, args):
     logger.info(f'number of patches: {num_patch}')
     
     # get model
-    model = PatchTST(c_in=c_in,
-                target_dim=args.target_points,
-                patch_len=args.patch_len,
-                stride=args.stride,
-                num_patch=num_patch,
-                n_layers=args.n_layers,
-                n_heads=args.n_heads,
-                d_model=args.d_model,
-                shared_embedding=True,
-                d_ff=args.d_ff,                        
-                dropout=args.dropout,
-                head_dropout=args.head_dropout,
-                act='relu',
-                head_type='pretrain',
-                res_attention=False
-                )        
+    if args.model_backbone == 'PatchTST':
+        model = PatchTST(c_in=c_in,
+                    target_dim=args.target_points,
+                    patch_len=args.patch_len,
+                    stride=args.stride,
+                    num_patch=num_patch,
+                    n_layers=args.n_layers,
+                    n_heads=args.n_heads,
+                    d_model=args.d_model,
+                    shared_embedding=True,
+                    d_ff=args.d_ff,                        
+                    dropout=args.dropout,
+                    head_dropout=args.head_dropout,
+                    act='relu',
+                    head_type='pretrain',
+                    res_attention=False
+                    )  
+    
+    elif args.model_backbone == 'MCformer':
+        model = MCformer(c_in=c_in,
+                    target_dim=args.target_points,
+                    patch_len=args.patch_len,
+                    stride=args.stride,
+                    num_patch=num_patch,
+                    n_layers=args.n_layers,
+                    n_heads=args.n_heads,
+                    d_model=args.d_model,
+                    shared_embedding=True,
+                    d_ff=args.d_ff,                        
+                    dropout=args.dropout,
+                    head_dropout=args.head_dropout,
+                    act='relu',
+                    head_type='pretrain',
+                    res_attention=False
+                    )  
+    else:
+        raise ValueError(f'Model backbone {args.model_backbone} not supported')
     # print out the model size
     logger.info(f'number of model params {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
     return model
@@ -133,6 +155,7 @@ if __name__ == '__main__':
     # RevIN
     parser.add_argument('--revin', type=int, default=1, help='reversible instance normalization')
     # Model args
+    parser.add_argument('--model_backbone', type=str, default='PatchTST', help='model backbone')
     parser.add_argument('--n_layers', type=int, default=3, help='number of Transformer layers')
     parser.add_argument('--n_heads', type=int, default=16, help='number of Transformer heads')
     parser.add_argument('--d_model', type=int, default=128, help='Transformer d_model')
@@ -153,7 +176,7 @@ if __name__ == '__main__':
     logger.info(f'args: {args}')
     args.save_pretrained_model = 'patchtst_pretrained_cw'+str(args.context_points)+'_patch'+str(args.patch_len) + '_stride'+str(args.stride) + '_epochs-pretrain' + str(args.n_epochs_pretrain) + '_mask' + str(args.mask_ratio)  + '_model' + str(args.pretrained_model_id)
     if args.revin: args.save_pretrained_model += '_revin'
-    args.save_path = 'saved_models/' + args.dset_pretrain + '/masked_patchtst/' + args.model_type + '/'
+    args.save_path = 'saved_models/' + args.dset_pretrain + '/masked_' + args.model_backbone + '/' + args.model_type + '/'
     if not os.path.exists(args.save_path): os.makedirs(args.save_path)
     
     args.dset = args.dset_pretrain
@@ -162,3 +185,4 @@ if __name__ == '__main__':
     pretrain_func(suggested_lr, args.save_path, args.save_pretrained_model)
     
 
+# conda activate patchtst && python -m patchtst_pretrain --dset_pretrain etth1_reg --revin 0 --n_epochs_pretrain 10 --n_layers 2 --n_heads 2

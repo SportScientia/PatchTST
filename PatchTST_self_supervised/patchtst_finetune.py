@@ -7,6 +7,7 @@ import torch
 from torch import nn
 
 from src.models.patchTST import PatchTST
+from src.models.MCformer import MCformer
 from src.learner import Learner, transfer_weights
 from src.callback.core import *
 from src.callback.tracking import *
@@ -36,6 +37,7 @@ parser.add_argument('--stride', type=int, default=12, help='stride between patch
 # RevIN
 parser.add_argument('--revin', type=int, default=1, help='reversible instance normalization')
 # Model args
+parser.add_argument('--model_backbone', type=str, default='PatchTST', help='model backbone')
 parser.add_argument('--n_layers', type=int, default=3, help='number of Transformer layers')
 parser.add_argument('--n_heads', type=int, default=16, help='number of Transformer heads')
 parser.add_argument('--d_model', type=int, default=128, help='Transformer d_model')
@@ -55,14 +57,14 @@ parser.add_argument('--head_type', type=str, default='force_prediction', help='f
 
 args = parser.parse_args()
 print('args:', args)
-args.save_path = 'saved_models/' + args.dset_finetune + '/masked_patchtst/' + args.model_type + '/'
+args.save_path = 'saved_models/' + args.dset_finetune + '/masked_' + args.model_backbone + '/' + args.model_type + '/'
 if not os.path.exists(args.save_path): os.makedirs(args.save_path)
 
 # args.save_finetuned_model = '_cw'+str(args.context_points)+'_tw'+str(args.target_points) + '_patch'+str(args.patch_len) + '_stride'+str(args.stride) + '_epochs-finetune' + str(args.n_epochs_finetune) + '_mask' + str(args.mask_ratio)  + '_model' + str(args.finetuned_model_id)
 suffix_name = '_cw'+str(args.context_points)+'_tw'+str(args.target_points) + '_patch'+str(args.patch_len) + '_stride'+str(args.stride) + '_epochs-finetune' + str(args.n_epochs_finetune) + '_model' + str(args.finetuned_model_id)
-if args.is_finetune: args.save_finetuned_model = args.dset_finetune+'_patchtst_finetuned'+suffix_name
-elif args.is_linear_probe: args.save_finetuned_model = args.dset_finetune+'_patchtst_linear-probe'+suffix_name
-else: args.save_finetuned_model = args.dset_finetune+'_patchtst_finetuned'+suffix_name
+if args.is_finetune: args.save_finetuned_model = args.dset_finetune+'_'+args.model_backbone+'_finetuned'+suffix_name
+elif args.is_linear_probe: args.save_finetuned_model = args.dset_finetune+'_'+args.model_backbone+'_linear-probe'+suffix_name
+else: args.save_finetuned_model = args.dset_finetune+'_'+args.model_backbone+'_finetuned'+suffix_name
 
 # get available GPU devide
 # if torch.cuda.is_available():
@@ -81,22 +83,41 @@ def get_model(c_in, args, head_type, weight_path=None):
     print('number of patches:', num_patch)
     
     # get model
-    model = PatchTST(c_in=c_in,
-                target_dim=args.target_points,
-                patch_len=args.patch_len,
-                stride=args.stride,
-                num_patch=num_patch,
-                n_layers=args.n_layers,
-                n_heads=args.n_heads,
-                d_model=args.d_model,
-                shared_embedding=True,
-                d_ff=args.d_ff,                        
-                dropout=args.dropout,
-                head_dropout=args.head_dropout,
-                act='relu',
-                head_type=head_type,
-                res_attention=False
-                )    
+    if args.model_backbone == 'PatchTST':
+        model = PatchTST(c_in=c_in,
+                    target_dim=args.target_points,
+                    patch_len=args.patch_len,
+                    stride=args.stride,
+                    num_patch=num_patch,
+                    n_layers=args.n_layers,
+                    n_heads=args.n_heads,
+                    d_model=args.d_model,
+                    shared_embedding=True,
+                    d_ff=args.d_ff,                        
+                    dropout=args.dropout,
+                    head_dropout=args.head_dropout,
+                    act='relu',
+                    head_type=head_type,
+                    res_attention=False
+                    )    
+
+    elif args.model_backbone == 'MCformer':
+        model = MCformer(c_in=c_in,
+                    target_dim=args.target_points,
+                    patch_len=args.patch_len,
+                    stride=args.stride,
+                    num_patch=num_patch,
+                    n_layers=args.n_layers,
+                    n_heads=args.n_heads,
+                    d_model=args.d_model,
+                    shared_embedding=True,
+                    d_ff=args.d_ff,                        
+                    dropout=args.dropout,
+                    head_dropout=args.head_dropout,
+                    act='relu',
+                    head_type=head_type,
+                    res_attention=False
+                    )  
     if weight_path: model = transfer_weights(weight_path, model)
     # print out the model size
     print('number of model params', sum(p.numel() for p in model.parameters() if p.requires_grad))
@@ -219,7 +240,7 @@ if __name__ == '__main__':
     if args.is_finetune:
         args.dset = args.dset_finetune
         # Finetune
-        suggested_lr = find_lr(head_type=args.head_type)        
+        suggested_lr = 0.007054802310718645 #find_lr(head_type=args.head_type)        
         finetune_func(suggested_lr)        
         print('finetune completed')
         # Test
@@ -229,7 +250,7 @@ if __name__ == '__main__':
     elif args.is_linear_probe:
         args.dset = args.dset_finetune
         # Finetune
-        suggested_lr = find_lr(head_type=args.head_type)        
+        suggested_lr = 0.007054802310718645 #find_lr(head_type=args.head_type)        
         linear_probe_func(suggested_lr)        
         print('finetune completed')
         # Test
@@ -238,7 +259,7 @@ if __name__ == '__main__':
 
     else:
         args.dset = args.dset_finetune
-        weight_path = args.save_path+args.dset_finetune+'_patchtst_finetuned'+suffix_name
+        weight_path = args.save_path+args.dset_finetune+'_'+args.model_backbone+'_finetuned'+suffix_name
         # Test
         out = test_func(weight_path)        
         print('----------- Complete! -----------')
@@ -248,3 +269,7 @@ if __name__ == '__main__':
 # conda activate patchtst && python -m patchtst_finetune --head_type force_prediction --pretrained_model /home/ubuntu/repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain100_mask0.4_model1.pth
 # conda activate patchtst && python -m patchtst_finetune --head_type force_prediction --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth
 # conda activate patchtst && python -m patchtst_finetune --head_type prediction --dset_finetune etth1 --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/etth1/masked_patchtst/based_model/patchtst_pretrained_cw512_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth
+# conda activate patchtst && python -m patchtst_finetune --head_type force_prediction --dset_finetune etth1_reg --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/etth1_reg/masked_patchtst/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth --revin 0 --n_layers 2 --n_heads 2
+
+
+# conda activate patchtst && python -m patchtst_finetune --model_backbone MCformer --head_type force_prediction --pretrained_model /Users/aptperson/source/SS_repos/PatchTST/PatchTST_self_supervised/saved_models/force_pretrain/masked_MCformer/based_model/patchtst_pretrained_cw460_patch12_stride12_epochs-pretrain10_mask0.4_model1.pth
