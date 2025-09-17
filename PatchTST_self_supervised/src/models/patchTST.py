@@ -54,7 +54,7 @@ class PatchTST(nn.Module):
         elif head_type == "force_prediction":
             self.head = forcePredictionHead(individual, self.n_vars, d_model, num_patch, target_dim, head_dropout)
         elif head_type == "force_prediction_revin":
-            self.head = forcePredictionHead_revin(individual, self.n_vars, d_model, num_patch, target_dim, head_dropout)
+            self.head = forcePredictionHead_pre_revin(individual, self.n_vars, d_model, num_patch, target_dim, head_dropout)
         elif head_type == "force_regression":
             self.head = forceRegressionHead(self.n_vars, d_model, target_dim, head_dropout)
         elif head_type == "regression":
@@ -117,23 +117,16 @@ class ClassificationHead(nn.Module):
 
 
 class forcePredictionHead(nn.Module):
-    def __init__(self, individual, n_vars, d_model, num_patch, forecast_len, head_dropout=0, flatten=False):
+    def __init__(self, individual, n_vars, d_model, num_patch, forecast_len, head_dropout=0):
         super().__init__()
 
         self.individual = individual
         self.n_vars = n_vars
-        self.flatten = flatten
-        head_dim = d_model*num_patch
         self.forecast_len = forecast_len
-        self.head_dim = head_dim
+        self.head_dim = d_model*num_patch
         self.head_dropout = head_dropout
 
         self.flatten = nn.Flatten(start_dim=-2)
-        # ds = 30
-        # self.linear1 = nn.Linear(self.head_dim, self.head_dim // ds)
-        # self.linear2 = nn.Linear(self.head_dim // ds, self.forecast_len)
-        # self.linear_features_combine1 = nn.Linear(self.n_vars, self.n_vars // 2)
-        # self.linear_features_combine2 = nn.Linear(self.n_vars // 2, 1)
 
         self.linear1 = nn.Linear(self.head_dim, self.forecast_len)
         self.linear_features_combine2 = nn.Linear(self.n_vars, 1)
@@ -141,27 +134,65 @@ class forcePredictionHead(nn.Module):
         self.dropout = nn.Dropout(self.head_dropout)
         self.activation = nn.GELU()
 
-    def feature_extractor(self, x):
+    def forward(self, x):
         x = self.flatten(x)                         # x: [bs x nvars x (d_model * num_patch)], [bs x nvars x head_dim] 
         x = self.linear1(x)                         # x: [bs x nvars x head_dim // 2]
         x = self.activation(x)
         x = self.dropout(x)
-
-        # x = x.transpose(2,1)                        # x: [bs x head_dim // 2 x nvars]
-        # x = self.linear_features_combine1(x)        # x: [bs x nvars // 2 x head_dim // 2]
-        # x = self.activation(x)
-        # x = self.dropout(x)
-
-        # x = x.transpose(2,1)                        # x: [bs x head_dim // 2 x nvars // 2]
-        # x = self.linear2(x)                         # x: [bs x forecast_len x nvars // 2]
-        # x = self.activation(x)
-        # x = self.dropout(x)
-
         x = x.transpose(2,1)                        # x: [bs x nvars // 2 x forecast_len]
-        x = self.linear_features_combine2(x)        # x: [bs x forecast_len x 1]
-        # x = self.activation(x)
-        # x = self.dropout(x)
-        return x
+        return self.linear_features_combine2(x)        # x: [bs x forecast_len x 1]
+
+    def _init_weights(self):
+        for module in self.feature_extractor:
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                nn.init.zeros_(module.bias)
+
+
+class forcePredictionHead_pre_revin(nn.Module):
+    def __init__(self, individual, n_vars, d_model, num_patch, forecast_len, head_dropout=0):
+        super().__init__()
+
+        self.individual = individual
+        self.n_vars = n_vars
+        self.forecast_len = forecast_len
+        self.head_dim = d_model*num_patch
+        self.head_dropout = head_dropout
+
+        self.flatten = nn.Flatten(start_dim=-2)
+
+        self.linear1 = nn.Linear(self.head_dim, self.forecast_len)
+        self.linear_features_combine2 = nn.Linear(self.n_vars, 1)
+
+        self.dropout = nn.Dropout(self.head_dropout)
+        self.activation = nn.GELU()
+
+    def forward(self, x):
+        x = self.flatten(x)                         # x: [bs x nvars x (d_model * num_patch)], [bs x nvars x head_dim] 
+        x = self.linear1(x)                         # x: [bs x nvars x head_dim // 2]
+        x = self.activation(x)
+        x = self.dropout(x)
+        return x.transpose(2,1)
+
+    def _init_weights(self):
+        for module in self.feature_extractor:
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                nn.init.zeros_(module.bias)
+
+
+class forcePredictionHead_post_revin(nn.Module):
+    def __init__(self, individual, n_vars, d_model, num_patch, forecast_len, head_dropout=0):
+        super().__init__()
+
+        self.individual = individual
+        self.n_vars = n_vars
+        self.forecast_len = forecast_len
+        self.head_dim = d_model*num_patch
+        self.head_dropout = head_dropout
+
+        self.linear_features_combine2 = nn.Linear(self.n_vars, 1)
+
 
     def _init_weights(self):
         for module in self.feature_extractor:
@@ -170,52 +201,8 @@ class forcePredictionHead(nn.Module):
                 nn.init.zeros_(module.bias)
 
     def forward(self, x):
-        # breakpoint()
-        # x_back = x.clone()
-        # x = x_back.clone()
-        return self.feature_extractor(x)
+        return self.linear_features_combine2(x)
 
-
-    # def forward(self, x):                     
-    #     """
-    #     x: [bs x nvars x d_model x num_patch]
-    #     output: [bs x forecast_len x nvars]
-    #     """
-    #     x = self.flatten(x)     # x: [bs x nvars x (d_model * num_patch)]    
-    #     x = self.dropout(x)
-    #     x = self.linear(x)      # x: [bs x nvars x forecast_len]
-    #     x = self.activation(x)
-    #     x =x.transpose(2,1)
-    #     x = self.dropout(x)
-    #     return self.linear_features_combine(x).squeeze(-1)
-        
-
-
-class forcePredictionHead_revin(nn.Module):
-    def __init__(self, individual, n_vars, d_model, num_patch, forecast_len, head_dropout=0, flatten=False):
-        super().__init__()
-
-        self.individual = individual
-        self.n_vars = n_vars
-        self.flatten = flatten
-        head_dim = d_model*num_patch
-
-        self.flatten = nn.Flatten(start_dim=-2)
-        self.linear = nn.Linear(head_dim, forecast_len, 1)
-        self.dropout = nn.Dropout(head_dropout)
-
-        # self.linear_features_combine = nn.Linear(n_vars, 1)
-
-    def forward(self, x):                     
-        """
-        x: [bs x nvars x d_model x num_patch]
-        output: [bs x forecast_len x nvars]
-        """
-        x = self.flatten(x)     # x: [bs x nvars x (d_model * num_patch)]    
-        x = self.dropout(x)
-        x = self.linear(x)      # x: [bs x nvars x forecast_len]
-        # ### need more layers here
-        return x.transpose(2,1)
 
 
 class forceRegressionHead(nn.Module):

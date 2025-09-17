@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from .core import Callback
 from src.models.layers.revin import RevIN
+from src.models.patchTST import forcePredictionHead_post_revin
 
 class RevInCB(Callback):
     def __init__(self, num_features: int, eps=1e-5, 
@@ -37,3 +38,18 @@ class RevInCB(Callback):
         self.learner.pred = pred
     
 
+class RevInRegressionHeadCB(Callback):
+    def __init__(self, n_vars: int, d_model: int, num_patch: int, forecast_len: int, head_dropout: float, individual: bool = False):
+        super().__init__()
+        self.n_vars = n_vars
+        self.d_model = d_model
+        self.num_patch = num_patch
+        self.forecast_len = forecast_len
+        self.head_dropout = head_dropout
+        self.head = forcePredictionHead_post_revin(individual, n_vars, d_model, num_patch, forecast_len, head_dropout)
+    
+    def before_forward(self): pass
+
+    def after_forward(self): 
+        self.learner.pred = self.head(self.learner.pred)
+    

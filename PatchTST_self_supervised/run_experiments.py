@@ -122,7 +122,7 @@ def get_model(config, head_type):
                     d_ff=config['hyperparameters']['d_ff'],                        
                     dropout=config['hyperparameters']['dropout'],
                     head_dropout=config['hyperparameters']['head_dropout'],
-                    act='relu',
+                    act='gelu',
                     head_type=head_type,
                     res_attention=False
                     )  
@@ -140,7 +140,7 @@ def get_model(config, head_type):
                     d_ff=config['hyperparameters']['d_ff'],                        
                     dropout=config['hyperparameters']['dropout'],
                     head_dropout=config['hyperparameters']['head_dropout'],
-                    act='relu',
+                    act='gelu',
                     head_type=head_type,
                     res_attention=False
                     )  
@@ -248,10 +248,9 @@ def finetune_model(config):
     # get callbacks
     fname = 'finetune_' + config['output']['model_name'] + '_epochs-finetune' + str(config['hyperparameters']['n_epochs_finetune'])
     cbs = [RevInCB(dls.vars, denorm=True)] if config['hyperparameters']['revin'] else []
-    cbs += [
-         PatchCB(patch_len=config['hyperparameters']['patch_len'], stride=config['hyperparameters']['stride']),
-         SaveModelCB(monitor='valid_loss', fname=fname, path=config['output']['save_path'])
-        ]
+    cbs.append(PatchCB(patch_len=config['hyperparameters']['patch_len'], stride=config['hyperparameters']['stride']))
+    if config['hyperparameters']['revin']: cbs.append(RevInRegressionHeadCB(config['hyperparameters']['n_features'], config['hyperparameters']['d_model'], config['hyperparameters']['num_patch'], config['hyperparameters']['target_points'], config['hyperparameters']['head_dropout']))
+    cbs.append(SaveModelCB(monitor='valid_loss', fname=fname, path=config['output']['save_path']))
     # define learner
     learn = Learner(dls, model, 
                         loss_func, 
@@ -269,8 +268,8 @@ def main():
     config = load_base_config('configs/config_long_PatchTST_base.yml')
 
     N_LAYERS = [1, 2, 3]
-    model_backbone = ['PatchTST', 'MCformer']
-    revin = [0] #[0, 1]
+    model_backbone = ['PatchTST'] #, 'MCformer']
+    revin = [1] #[0, 1]
     loss_function = ['MSELoss']
 
     for n_layers, model_backbone, revin, loss_function in itertools.product(N_LAYERS, model_backbone, revin, loss_function):

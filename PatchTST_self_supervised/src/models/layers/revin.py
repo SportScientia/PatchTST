@@ -15,27 +15,22 @@ class RevIN(nn.Module):
         if self.affine:
             self._init_params()
 
-    
-    def _feature_reduction_layer(self, x):
-        x = self.dropout(x)
-        return self.feature_reduction(x)
-
     def forward(self, x, mode:str):
         if mode == 'norm':
             self._get_statistics(x)
             x = self._normalize(x)
         elif mode == 'denorm':
-            # x = self._denormalize(x)
-            x = self._feature_reduction_layer(x).squeeze(-1)
+            x = self._denormalize(x)
         else: raise NotImplementedError
         return x
 
     def _init_params(self):
         # initialize RevIN params: (C,)
-        self.affine_weight = nn.Parameter(torch.ones(self.num_features)).to('cuda')
-        self.affine_bias = nn.Parameter(torch.zeros(self.num_features)).to('cuda')
-        self.dropout = nn.Dropout(0.1).to('cuda')
-        self.feature_reduction = nn.Linear(self.num_features, 1).to('cuda')
+        self.affine_weight = nn.Parameter(torch.ones(self.num_features))
+        self.affine_bias = nn.Parameter(torch.zeros(self.num_features))
+        if torch.cuda.is_available():
+            self.affine_weight = self.affine_weight.to('cuda')
+            self.affine_bias = self.affine_bias.to('cuda')
 
     def _get_statistics(self, x):
         dim2reduce = tuple(range(1, x.ndim-1))
